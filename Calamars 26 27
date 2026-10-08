@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d3549">
+<link rel="manifest" href="manifest.json">
+<title>Pesca Mallorca · 26/27</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--nav:#0d3549;--nav2:#164c67;--accent:#e5a72d;--bg:#eef2f4;--card:#fff;--txt:#17313d;--muted:#71818a;--line:#dce4e8}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{height:58px;background:linear-gradient(135deg,var(--nav),var(--nav2));color:white;display:flex;align-items:center;justify-content:space-between;padding:0 15px;position:sticky;top:0;z-index:1000;box-shadow:0 2px 10px #0002}
+header h1{font-size:17px;margin:0;font-weight:800}.season{font-size:11px;opacity:.8}
+main{padding-bottom:78px}.screen{display:none}.screen.active{display:block}
+#map{height:calc(100vh - 124px);min-height:500px}
+.map-tools{position:absolute;top:67px;left:10px;right:10px;z-index:800;display:flex;gap:7px;pointer-events:none}
+.map-tools>*{pointer-events:auto}.map-pill{background:white;border:0;border-radius:10px;padding:8px 10px;box-shadow:0 2px 9px #0002;font-size:12px}
+.map-pill strong{font-size:14px}
+.filter{margin-left:auto}
+nav{position:fixed;bottom:0;left:0;right:0;height:68px;background:#fff;border-top:1px solid var(--line);display:flex;z-index:1200;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:#758189;font-size:10px}nav button b{display:block;font-size:21px;line-height:25px}nav button.active{color:var(--nav);font-weight:800}
+.panel{padding:15px;max-width:950px;margin:auto}h2{font-size:21px;margin:4px 0 14px}h3{font-size:15px;margin:4px 0 12px}
+.card{background:var(--card);border-radius:15px;padding:15px;margin-bottom:12px;box-shadow:0 2px 12px #0000000a}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;font:inherit;color:var(--txt)}textarea{min-height:78px}
+.full{grid-column:1/-1}.btn{border:0;border-radius:10px;padding:12px 14px;background:var(--nav);color:white;font-weight:800;font-size:14px;width:100%}.btn.secondary{background:#e7edef;color:var(--nav)}.btn.danger{background:#b8423a}
+.actions{display:flex;gap:8px}.actions>*{flex:1}.small{font-size:12px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.stat{background:white;border-radius:13px;padding:13px}.stat .n{font-size:25px;font-weight:850}.stat .l{font-size:11px;color:var(--muted)}
+.barrow{margin:11px 0}.barlabel{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}.bar{height:9px;background:#e6ecef;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.item{padding:13px 0;border-bottom:1px solid #edf1f2}.item:last-child{border-bottom:0}.item strong{font-size:14px}.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.badge{background:#edf3f5;border-radius:99px;padding:5px 8px;font-size:11px}
+.leaflet-popup-content{margin:12px;min-width:215px}.p-title{font-weight:850;font-size:15px}.p-sub{font-size:11px;color:#71818a;margin-top:2px}.p-count{display:flex;gap:8px;margin:10px 0}.p-count span{background:#f2f5f6;border-radius:9px;padding:7px 9px;font-size:12px}.p-note{font-size:11px;color:#65757d;margin-top:7px}.popup-actions{display:flex;gap:6px;margin-top:10px}.popup-actions button{border:0;border-radius:8px;padding:8px 9px;background:#0d3549;color:white;font-weight:700}.popup-actions button.alt{background:#e8eef0;color:#0d3549}
+@media(min-width:700px){.stats{grid-template-columns:repeat(4,1fr)}nav{position:sticky;top:0;bottom:auto}.screen{min-height:calc(100vh - 58px)}}
+</style>
+</head>
+<body>
+<header><h1>🎣 Pesca Mallorca</h1><span class="season">TEMPORADA 26/27</span></header>
+<main>
+<section id="mapScreen" class="screen active">
+  <div class="map-tools">
+    <div class="map-pill"><strong id="mapCount">0</strong> jornadas</div>
+    <button class="map-pill filter" onclick="toggleFilter()">🔎 Filtrar</button>
+  </div>
+  <div id="filterPanel" style="display:none;position:absolute;top:112px;right:10px;z-index:900;background:#fff;padding:12px;border-radius:12px;box-shadow:0 2px 12px #0003;width:210px">
+    <label>Mostrar</label>
+    <select id="mapFilter" onchange="renderMarkers()"><option value="all">Todas las jornadas</option><option value="catch">Con capturas</option><option value="squid">Con calamares</option><option value="cuttlefish">Con sepias</option></select>
+  </div>
+  <div id="map"></div>
+</section>
+
+<section id="newScreen" class="screen">
+<div class="panel"><h2 id="formTitle">Nueva jornada</h2>
+<div class="card"><div class="grid">
+<div><label>Fecha</label><input id="date" type="date"></div>
+<div><label>Hora de inicio</label><input id="start" type="time"></div>
+<div><label>Hora de finalización</label><input id="end" type="time"></div>
+<div><label>Zona</label><input id="zone" placeholder="Nombre de la zona"></div>
+<div><label>Calamares</label><input id="squid" type="number" min="0" value="0"></div>
+<div><label>Sepias</label><input id="cuttlefish" type="number" min="0" value="0"></div>
+<div class="full"><label>Señuelo utilizado</label><select id="lure"></select></div>
+<div class="full"><label>🌙 Luna</label><input id="moon" readonly></div>
+<div class="full"><label>Observaciones</label><textarea id="notes" placeholder="Opcional"></textarea></div>
+</div></div>
+<div class="actions"><button class="btn secondary" onclick="show('mapScreen')">Cancelar</button><button class="btn" onclick="saveEntry()">Guardar</button></div>
+<div id="editDelete" style="display:none;margin-top:8px"><button class="btn danger" onclick="deleteCurrent()">Eliminar jornada</button></div>
+</div></section>
+
+<section id="statsScreen" class="screen"><div class="panel"><h2>📊 Estadísticas 26/27</h2>
+<div class="stats">
+<div class="stat"><div class="n" id="stJ">0</div><div class="l">Jornadas</div></div><div class="stat"><div class="n" id="stT">0</div><div class="l">Capturas</div></div>
+<div class="stat"><div class="n" id="stS">0</div><div class="l">Calamares</div></div><div class="stat"><div class="n" id="stC">0</div><div class="l">Sepias</div></div>
+<div class="stat"><div class="n" id="stAvg">0</div><div class="l">Media / jornada</div></div><div class="stat"><div class="n" id="stBest">0</div><div class="l">Mejor jornada</div></div>
+<div class="stat"><div class="n" id="stHours">0</div><div class="l">Horas pescadas</div></div><div class="stat"><div class="n" id="stRate">0</div><div class="l">Capturas / hora</div></div>
+</div>
+<div class="card" style="margin-top:12px"><h3>Capturas por mes</h3><div id="months"></div></div>
+<div class="card"><h3>Capturas por señuelo</h3><div id="lures"></div></div>
+<div class="card"><h3>Capturas por luna</h3><div id="moons"></div></div>
+<div class="card"><h3>Capturas por zona</h3><div id="zones"></div></div>
+</div></section>
+
+<section id="historyScreen" class="screen"><div class="panel"><h2>📋 Jornadas</h2><div id="history"></div></div></section>
+
+<section id="settingsScreen" class="screen"><div class="panel"><h2>⚙️ Ajustes</h2>
+<div class="card"><h3>Mis señuelos</h3><div id="lureList"></div><div class="actions" style="margin-top:10px"><input id="newLure" placeholder="Nuevo señuelo"><button class="btn" style="width:auto" onclick="addLure()">Añadir</button></div></div>
+<div class="card"><h3>Datos</h3><button class="btn secondary" onclick="exportData()">Exportar datos</button><div style="height:8px"></div><button class="btn danger" onclick="clearAll()">Borrar todas las jornadas</button></div>
+</div></section>
+</main>
+<nav>
+<button id="navMap" class="active" onclick="show('mapScreen')"><b>🗺️</b>Mapa</button>
+<button onclick="newEntry()"><b>＋</b>Jornada</button>
+<button id="navStats" onclick="show('statsScreen')"><b>📊</b>Estadísticas</button>
+<button id="navHistory" onclick="show('historyScreen')"><b>📋</b>Jornadas</button>
+<button onclick="show('settingsScreen')"><b>⚙️</b>Ajustes</button>
+</nav>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const KEY='pesca-mallorca-2627-v2',LKEY='pesca-mallorca-lures-v2';
+let entries=JSON.parse(localStorage.getItem(KEY)||'[]'),lures=JSON.parse(localStorage.getItem(LKEY)||'["Yamashita","Yo-Zuri","DTD","Duel","Otro"]');
+let map,markers={},editingId=null,pendingCoords=null;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(entries));localStorage.setItem(LKEY,JSON.stringify(lures))}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(id==='mapScreen')$('navMap').classList.add('active');if(id==='statsScreen')$('navStats').classList.add('active');if(id==='historyScreen')$('navHistory').classList.add('active');if(id==='mapScreen'&&map)setTimeout(()=>map.invalidateSize(),100);if(id==='statsScreen')renderStats();if(id==='historyScreen')renderHistory();if(id==='settingsScreen')renderLures()}
+function toggleFilter(){let p=$('filterPanel');p.style.display=p.style.display==='none'?'block':'none'}
+function initMap(){map=L.map('map').setView([39.62,2.95],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);map.on('click',e=>{pendingCoords={lat:e.latlng.lat,lng:e.latlng.lng};newEntry()});renderMarkers()}
+function renderMarkers(){
+ Object.values(markers).forEach(m=>map.removeLayer(m));markers={};let f=$('mapFilter')?.value||'all';let shown=entries.filter(e=>f==='all'||(f==='catch'&&(e.squid+e.cuttlefish)>0)||(f==='squid'&&e.squid>0)||(f==='cuttlefish'&&e.cuttlefish>0));$('mapCount').textContent=shown.length;
+ shown.forEach(e=>{let total=e.squid+e.cuttlefish;let color=total>=8?'#246bce':total>=4?'#2d9a5b':total?'#e5a72d':'#b8423a';let icon=L.divIcon({className:'custom',html:`<div style="background:${color};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px #0008"></div>`,iconSize:[20,20],iconAnchor:[10,10]});let m=L.marker([e.lat,e.lng],{icon}).addTo(map);
+ let note=e.notes?`<div class="p-note">📝 ${esc(e.notes)}</div>`:'';m.bindPopup(`<div class="p-title">${esc(e.zone||'Jornada sin nombre')}</div><div class="p-sub">${fmtDate(e.date)} · ${e.start||''}${e.end?'–'+e.end:''}</div><div class="p-count"><span>🦑 ${e.squid} calamares</span><span>🦑 ${e.cuttlefish} sepias</span></div><div class="p-sub">🎣 ${esc(e.lure||'')} · ${e.moon||''}</div>${note}<div class="popup-actions"><button onclick="editEntry('${e.id}')">Editar</button><button class="alt" onclick="focusEntry('${e.id}')">Centrar</button></div>`);markers[e.id]=m})
+}
+function focusEntry(id){let e=entries.find(x=>x.id===id);if(e){map.setView([e.lat,e.lng],14);markers[id]?.openPopup()}}
+function newEntry(){editingId=null;$('formTitle').textContent='Nueva jornada';$('editDelete').style.display='none';let d=new Date();$('date').value=d.toISOString().slice(0,10);$('start').value=d.toTimeString().slice(0,5);$('end').value='';$('zone').value='';$('squid').value=0;$('cuttlefish').value=0;$('notes').value='';fillLures();$('lure').selectedIndex=0;updateMoon();show('newScreen')}
+function editEntry(id){let e=entries.find(x=>x.id===id);if(!e)return;editingId=id;pendingCoords={lat:e.lat,lng:e.lng};$('formTitle').textContent='Editar jornada';$('editDelete').style.display='block';['date','start','end','zone','squid','cuttlefish','notes'].forEach(k=>$(k).value=e[k]??'');fillLures();$('lure').value=e.lure||lures[0];$('moon').value=e.moon||moonPhase(e.date);show('newScreen')}
+function saveEntry(){if(!pendingCoords){alert('Selecciona primero el punto de la jornada en el mapa.');show('mapScreen');return}let e={id:editingId||Date.now().toString(),lat:pendingCoords.lat,lng:pendingCoords.lng,date:$('date').value,start:$('start').value,end:$('end').value,zone:$('zone').value.trim(),squid:+$('squid').value||0,cuttlefish:+$('cuttlefish').value||0,lure:$('lure').value,moon:moonPhase($('date').value),notes:$('notes').value.trim()};if(editingId)entries=entries.map(x=>x.id===editingId?e:x);else entries.push(e);save();renderMarkers();pendingCoords=null;editingId=null;show('mapScreen')}
+function deleteCurrent(){if(editingId&&confirm('¿Eliminar esta jornada?')){entries=entries.filter(x=>x.id!==editingId);save();renderMarkers();pendingCoords=null;editingId=null;show('mapScreen')}}
+function fillLures(){$('lure').innerHTML=lures.map(x=>`<option>${esc(x)}</option>`).join('')}
+function updateMoon(){if($('date').value)$('moon').value=moonPhase($('date').value)}$('date').addEventListener('change',updateMoon)
+function moonPhase(ds){let d=new Date(ds+'T12:00:00'),k=new Date('2000-01-06T18:14:00'),age=(((d-k)/86400000)%29.53058867+29.53058867)%29.53058867;if(age<1.85)return'🌑 Nueva';if(age<7.38)return'🌒 Creciente';if(age<9.23)return'🌓 Cuarto creciente';if(age<14.77)return'🌔 Gibosa';if(age<16.62)return'🌕 Llena';if(age<22.15)return'🌖 Gibosa menguante';if(age<23.99)return'🌗 Cuarto menguante';return'🌘 Menguante'}
+function fmtDate(d){if(!d)return'';let [y,m,day]=d.split('-');return`${day}/${m}/${y}`}
+function duration(e){if(!e.start||!e.end)return 0;let a=e.start.split(':').map(Number),b=e.end.split(':').map(Number),x=a[0]*60+a[1],y=b[0]*60+b[1];if(y<x)y+=1440;return(y-x)/60}
+function renderStats(){let j=entries.length,s=entries.reduce((a,e)=>a+e.squid,0),c=entries.reduce((a,e)=>a+e.cuttlefish,0),t=s+c,h=entries.reduce((a,e)=>a+duration(e),0);$('stJ').textContent=j;$('stS').textContent=s;$('stC').textContent=c;$('stT').textContent=t;$('stAvg').textContent=j?(t/j).toFixed(1):0;$('stBest').textContent=j?Math.max(...entries.map(e=>e.squid+e.cuttlefish)):0;$('stHours').textContent=h.toFixed(1);$('stRate').textContent=h?(t/h).toFixed(1):0;bars('months',group(e=>e.date?.slice(0,7)||'Sin fecha'),true);bars('lures',group(e=>e.lure||'Sin señuelo'),false);bars('moons',group(e=>e.moon||'Sin luna'),false);bars('zones',group(e=>e.zone||'Sin zona'),false)}
+function group(fn){let o={};entries.forEach(e=>{let k=fn(e);o[k]=(o[k]||0)+e.squid+e.cuttlefish});return o}
+function bars(id,data,month){let vals=Object.entries(data).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...vals.map(x=>x[1]));$(id).innerHTML=vals.length?vals.map(([k,v])=>`<div class="barrow"><div class="barlabel"><span>${month?monthName(k):esc(k)}</span><b>${v}</b></div><div class="bar"><i style="width:${v/max*100}%"></i></div></div>`).join(''):'<div class="empty">Aún no hay datos.</div>'}
+function monthName(k){let [y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'})}
+function renderHistory(){let el=$('history');if(!entries.length){el.innerHTML='<div class="empty">Todavía no hay jornadas.</div>';return}let a=[...entries].sort((x,y)=>(y.date+y.start).localeCompare(x.date+x.start));el.innerHTML=a.map(e=>`<div class="item"><strong>${esc(e.zone||'Sin zona')}</strong><div>${fmtDate(e.date)} · ${e.start||''}${e.end?'–'+e.end:''}</div><div class="badges"><span class="badge">🦑 ${e.squid} calamares</span><span class="badge">🦑 ${e.cuttlefish} sepias</span><span class="badge">🎣 ${esc(e.lure||'')}</span></div><div class="small" style="margin-top:5px">${e.moon||''}</div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="editEntry('${e.id}')">Editar</button></div></div>`).join('')}
+function renderLures(){$('lureList').innerHTML=lures.map((x,i)=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center"><span>${esc(x)}</span><button onclick="removeLure(${i})">Eliminar</button></div>`).join('')}
+function addLure(){let x=$('newLure').value.trim();if(x&&!lures.includes(x))lures.push(x);$('newLure').value='';save();renderLures();fillLures()}
+function removeLure(i){if(lures.length>1){lures.splice(i,1);save();renderLures();fillLures()}}
+function exportData(){let b=new Blob([JSON.stringify({temporada:'26/27',jornadas:entries,senuelos:lures},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pesca-mallorca-26-27.json';a.click();URL.revokeObjectURL(a.href)}
+function clearAll(){if(confirm('¿Borrar todas las jornadas?')){entries=[];save();renderMarkers();renderHistory();renderStats()}}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+fillLures();initMap();
+</script>
+</body></html>
